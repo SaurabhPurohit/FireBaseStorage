@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
@@ -14,6 +15,7 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.Toast;
 
+import com.bumptech.glide.Glide;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.storage.FirebaseStorage;
@@ -29,10 +31,12 @@ public class MainActivity extends AppCompatActivity {
 
     private Button buttonChoose;
     private Button buttonUpload;
-
+    private Button buttonPreview;
     private ImageView imageView;
-
+    private String downUri;
     private Uri filePath;
+
+
     StorageReference storageReference;
 
 //    private StorageReference storageReference;
@@ -43,7 +47,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         buttonChoose = (Button) findViewById(R.id.buttonChoose);
         buttonUpload = (Button) findViewById(R.id.buttonUpload);
-
+        buttonPreview = (Button) findViewById(R.id.buttonPreview);
         imageView = (ImageView) findViewById(R.id.imageView);
 
         //storageReference = FirebaseStorage.getInstance().getReferenceFromUrl("gs://fir-storage-6a7da.appspot.com");
@@ -66,6 +70,25 @@ public class MainActivity extends AppCompatActivity {
                 uploadFile();
             }
         });
+
+        buttonPreview.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                previewFile(downUri);
+            }
+
+
+        });
+    }
+
+    private void previewFile(String uri) {
+        if(uri!=null){
+
+                Glide.with(imageView.getContext())
+                        .load(uri)
+                        .into(imageView);
+            imageView.setVisibility(View.VISIBLE);
+        }
     }
 
     private void showFileChooser() {
@@ -94,7 +117,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void uploadFile() {
-        Log.d("URI",filePath.toString());
+        Log.d("uploadURI",filePath.toString());
         //if there is a file to upload
         if (filePath != null) {
 
@@ -107,15 +130,22 @@ public class MainActivity extends AppCompatActivity {
                     .child(filePath.getLastPathSegment());
 
 
-            Log.d("URI",filePath.toString());
+            Log.d("uploadURI",filePath.toString());
             riversRef.putFile(filePath)
                     .addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
                         @Override
                         public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+
+
                             //if the upload is successfull
-                            //hiding the progress dialog
+                            //get download uri of recently updated pic
+                            @SuppressWarnings("VisibleForTests")
+                            Uri downLoadUri = taskSnapshot.getDownloadUrl();
+                            downUri = downLoadUri.toString();
+                            // hiding the progress dialog
                             progressDialog.dismiss();
                             imageView.setVisibility(View.INVISIBLE);
+
                             //and displaying a success toast
                             Toast.makeText(getApplicationContext(), "File Uploaded ", Toast.LENGTH_LONG).show();
                         }
@@ -135,6 +165,7 @@ public class MainActivity extends AppCompatActivity {
                         @Override
                         public void onProgress(UploadTask.TaskSnapshot taskSnapshot) {
                             //calculating progress percentage
+                            @SuppressWarnings("VisibleForTests")
                             double progress = (100.0 * taskSnapshot.getBytesTransferred()) / taskSnapshot.getTotalByteCount();
 
                             //displaying percentage in progress dialog
